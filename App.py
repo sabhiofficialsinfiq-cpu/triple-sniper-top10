@@ -165,3 +165,67 @@ else:
         """, unsafe_allow_html=True)
         
     st.info(f"💡 **How to play:** These 10 combinations survived the strict Saliu Sieve (Sum Median: {int(sum_med)}). You can play them as Straight or Box.")
+# ==========================================
+# 6. COPY ALL, BOX PLAY & BACKTESTING (Append at bottom)
+# ==========================================
+st.divider()
+st.subheader("📋 Copy & Box Play")
+
+# 1. Copy All Feature
+all_combos_str = "\n".join(["".join(map(str, p["combo"])) for p in top_10_picks])
+st.markdown("**Copy all 10 combinations for your bookie:**")
+st.code(all_combos_str, language="text")
+
+# 2. Box Play Toggle
+show_box = st.checkbox("📦 Show Box Play Permutations for Top 3")
+if show_box:
+    for idx in range(min(3, len(top_10_picks))):
+        combo = top_10_picks[idx]["combo"]
+        perms = sorted(set(itertools.permutations(combo)))
+        perm_strings = ["".join(map(str, p)) for p in perms]
+        st.markdown(f"**Rank #{idx+1} ({''.join(map(str, combo))}) Box:**")
+        st.info(", ".join(perm_strings))
+
+# 3. Backtesting Engine for Top 10
+st.divider()
+st.subheader("🧪 Strategy Backtesting (Top 10)")
+st.markdown("Test how the Top 10 engine would have performed on the last 10 draws.")
+
+if st.button("Run Backtest", use_container_width=True):
+    with st.spinner("Simulating Top 10 Sieve..."):
+        test_results = []
+        test_range = 10
+        
+        if len(df) > test_range + 10:
+            for i in range(test_range):
+                train_data = df.iloc[i+1:].copy()
+                actual_draw = tuple(df.iloc[i][["Pos 1", "Pos 2", "Pos 3"]].values)
+                actual_str = "".join(map(str, actual_draw))
+                
+                # Get Top 10 predictions for this past draw
+                past_picks, _ = generate_top_10_picks(train_data, 100)
+                
+                if not past_picks:
+                    status = "No Play"
+                else:
+                    # Check if actual draw is in the Top 10
+                    predicted_combos = [p["combo"] for p in past_picks]
+                    if actual_draw in predicted_combos:
+                        rank = predicted_combos.index(actual_draw) + 1
+                        status = f"🎯 HIT (Rank #{rank})"
+                    else:
+                        status = "❌ Missed"
+                        
+                test_results.append({
+                    "Draw": f"Past -{i+1}",
+                    "Actual": actual_str,
+                    "Result": status
+                })
+            
+            res_df = pd.DataFrame(test_results)
+            st.dataframe(res_df, use_container_width=True, hide_index=True)
+            
+            hits = len(res_df[res_df["Result"].str.contains("HIT")])
+            st.success(f"**Performance:** The Top 10 engine hit the exact 3-digit number in **{hits}/10** past draws.")
+        else:
+            st.warning("Not enough data for backtest.")
