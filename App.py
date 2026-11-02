@@ -229,3 +229,60 @@ if st.button("Run Backtest", use_container_width=True):
             st.success(f"**Performance:** The Top 10 engine hit the exact 3-digit number in **{hits}/10** past draws.")
         else:
             st.warning("Not enough data for backtest.")
+# ==========================================
+# 7. CONSENSUS ENGINE (Top 5 Focus)
+# ==========================================
+st.divider()
+st.subheader("🧠 Consensus Engine (Top 5 Focus)")
+st.markdown("This engine analyzes the **Top 10 predictions**, finds the most frequent digits in each position, and builds the Top 5 most consensus 3-digit numbers.")
+
+if len(top_10_picks) > 0:
+    # 1. Count frequencies of digits in each position from the Top 10
+    pos1_freq = {i: 0 for i in range(10)}
+    pos2_freq = {i: 0 for i in range(10)}
+    pos3_freq = {i: 0 for i in range(10)}
+    
+    for pick in top_10_picks:
+        c = pick["combo"]
+        pos1_freq[c[0]] += 1
+        pos2_freq[c[1]] += 1
+        pos3_freq[c[2]] += 1
+        
+    # 2. Find the highest frequency digits (Threshold >= 2)
+    top_pos1 = [d for d, f in pos1_freq.items() if f >= 2]
+    top_pos2 = [d for d, f in pos2_freq.items() if f >= 2]
+    top_pos3 = [d for d, f in pos3_freq.items() if f >= 2]
+    
+    # Fallback if no digit appears >= 2 times
+    if not top_pos1: top_pos1 = [max(pos1_freq, key=pos1_freq.get)]
+    if not top_pos2: top_pos2 = [max(pos2_freq, key=pos2_freq.get)]
+    if not top_pos3: top_pos3 = [max(pos3_freq, key=pos3_freq.get)]
+
+    # 3. Generate combinations from the consensus digits
+    consensus_combos = list(itertools.product(top_pos1, top_pos2, top_pos3))
+    
+    # 4. Filter out exact duplicates and yesterday's draw
+    prev = tuple(df.iloc[0][["Pos 1", "Pos 2", "Pos 3"]].values)
+    consensus_combos = [c for c in consensus_combos if c != prev]
+    
+    st.write(f"**Most frequent digits found:**")
+    st.markdown(f"- Pos 1: **{top_pos1}** | Pos 2: **{top_pos2}** | Pos 3: **{top_pos3}**")
+    st.divider()
+    
+    st.markdown("### 🎯 The Final Top 5 Picks")
+    
+    # Display as cards
+    for idx, combo in enumerate(consensus_combos[:5]):
+        combo_str = "".join(map(str, combo))
+        
+        st.markdown(f"""
+        <div class="top-pick-card" style="border-left: 5px solid #2ECC71;">
+            <div class="rank-text">Consensus #{idx+1}</div>
+            <div class="combo-text">{combo_str}</div>
+            <div class="score-text">High Probability</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    st.info("💡 **How to play:** These 5 numbers are built from the most overlapping digits in the Top 10. Play them as Box or Straight.")
+else:
+    st.warning("No Top 10 predictions generated for this draw.")
